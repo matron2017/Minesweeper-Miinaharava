@@ -1,5 +1,4 @@
 # Minesweeper-Miinaharava
-Minesweepe in which you can choose size of the game grid and amount of mines per line.
-Comments in code are in Finnish
+Minesweeper in which you can choose the size of the game grid and the amount of mines per line. The comments in the code are in Finnish.
 
 
