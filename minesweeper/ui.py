@@ -54,41 +54,29 @@ class GameSetupDialog:
         self._root.destroy()
 
     def validate_inputs(self):
+        error_message = (
+            "Board width and height must be between 1 and 30. "
+            "Maximum mines per row must be between 1 and the board width."
+        )
+
         try:
-            if (
-                30 >= int(self._width.get()) > 0
-                and 30 >= int(self._height.get()) > 0
-                and int(self._width.get()) * int(self._height.get())
-                > int(self._max_mines_entry.get())
-                > 1
-            ):
-                self.stop()
-            else:
-                self._warning_label = tk.Label(
-                    text="Values must be integers greater than 0."
-                )
-                self._warning_label.grid(row=9, column=0)
-                self._limits_label = tk.Label(
-                    text=(
-                        "The maximum board size is 30x30. Mines cannot fill "
-                        "the whole board, and the maximum number of mines per "
-                        "row must be at least 2."
-                    )
-                )
-                self._limits_label.grid(row=10, column=0)
-        except:
-            self._warning_label = tk.Label(
-                text="Values must be integers greater than 0."
-            )
+            width = int(self._width.get())
+            height = int(self._height.get())
+            max_mines_per_row = int(self._max_mines_entry.get())
+        except ValueError:
+            self._warning_label = tk.Label(text=error_message)
             self._warning_label.grid(row=9, column=0)
-            self._limits_label = tk.Label(
-                text=(
-                    "The maximum board size is 30x30. Mines cannot fill "
-                    "the whole board, and the maximum number of mines per "
-                    "row must be at least 2."
-                )
-            )
-            self._limits_label.grid(row=10, column=0)
+            return
+
+        if (
+            1 <= width <= 30
+            and 1 <= height <= 30
+            and 1 <= max_mines_per_row <= width
+        ):
+            self.stop()
+        else:
+            self._warning_label = tk.Label(text=error_message)
+            self._warning_label.grid(row=9, column=0)
 
 
 class MinesweeperUI:

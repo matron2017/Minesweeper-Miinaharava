@@ -1,5 +1,6 @@
 import random
 import unittest
+from unittest.mock import patch
 
 from minesweeper.game import generate_board
 
@@ -58,6 +59,28 @@ class TestBoardGeneration(unittest.TestCase):
                             board, row_index, column_index
                         ),
                     )
+
+    @patch("minesweeper.game.random.randint", side_effect=[3, 0, 0, 0])
+    def test_each_row_gets_the_selected_number_of_unique_mines(self, randint):
+        board, _, _ = generate_board(4, 1, 3)
+
+        self.assertEqual(board[0].count("*"), 3)
+
+    def test_generate_board_rejects_zero_width(self):
+        with self.assertRaises(ValueError):
+            generate_board(0, 1, 1)
+
+    def test_generate_board_rejects_zero_height(self):
+        with self.assertRaises(ValueError):
+            generate_board(1, 0, 1)
+
+    def test_generate_board_rejects_zero_max_mines(self):
+        with self.assertRaises(ValueError):
+            generate_board(1, 1, 0)
+
+    def test_generate_board_rejects_too_many_mines(self):
+        with self.assertRaises(ValueError):
+            generate_board(2, 1, 3)
 
 
 if __name__ == "__main__":
