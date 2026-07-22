@@ -1,468 +1,337 @@
-#Simon Savukoski
+"""Tkinter user interface for Minesweeper."""
 
-#Miinaharava, jossa voi merkata miinoja oikealla klikkauksella
-
-# ja avata miinoja vasemmalla hiiren painalluksella.
-
-#Pelin voi voittaa avaamalla kaikki ei miinotetut napit.
-
-#Kätetään hyväksi tkinter kirjastoa graafisen esittämisen helpottamiseksi.
-
-#Random-kirjastoa käytetään miinojen määrän satunnaisessa luomisessa.
-
-from tkinter import *
-
+import tkinter as tk
 from minesweeper.game import generate_board
-
-#Funktio, jota käytetään pelin uudellen aloittamisessa
 
 
 def restart():
-    #Otetaan pelin koko ja miinojen määrä Gamesize luokasta
-    questions_ui = Gamesize()
+    setup_dialog = GameSetupDialog()
     try:
-        width, length, maxmines = questions_ui.start()
-    except TclError:
+        width, height, max_mines_per_row = setup_dialog.start()
+    except tk.TclError:
         return
-    board, width, length = generate_board(int(width), int(length), int(maxmines))
+    board, width, height = generate_board(
+        int(width), int(height), int(max_mines_per_row)
+    )
+    setup_dialog.destroy()
+    game_ui = MinesweeperUI(board, width, height)
+    game_ui.start()
 
 
-    questions_ui.destroy()
-    ui = Userinterface(board, width, length)
-    ui.start()
+class GameSetupDialog:
+    """Collect and validate the board settings entered by the player."""
 
-#Pelinkoko-luokka, jossa määritellään pelin koko ja miinojen määrä
-
-class Gamesize:
     def __init__(self):
-        #Tehdään syöttöikkunat, johon annetaan pelikentän koko ja miinojen
-        #maksimimäärä.
-        self.__mainwindow = Tk()
-        self.__mainwindow.title("Minesweeper")
-        self.__width = Entry(self.__mainwindow)
-        self.__widthlabel = Label(text="Width of board")
-        self.__width.grid(row=0, column=2)
-        self.__widthlabel.grid(row=0, column=0)
-        self.__length = Entry(self.__mainwindow)
-        self.__lenghtlabel = Label(text="Lenght of board")
-        self.__lenghtlabel.grid(row=2, column=0)
-        self.__length.grid(row=2, column=2)
-        self.__maxmines = Entry(self.__mainwindow)
-        self.__maxmineslabel = Label(text="Maximum amount of mines per line")
-        self.__maxmines.grid(row=4, column=2)
-        self.__maxmineslabel.grid(row=4, column=0)
-
-        self.__startbutton = Button(text="Start the game by pressing this button", command= self.checkvalues)
-        self.__startbutton.grid(row=7, column=2)
-        self.__integerlabel = Label(text="Give the numbers as integers, the game won't work otherwise")
-        self.__integerlabel.grid(row=7, column=0)
+        self._root = tk.Tk()
+        self._root.title("Minesweeper")
+        self._width = tk.Entry(self._root)
+        self._width_label = tk.Label(text="Board width")
+        self._width.grid(row=0, column=2)
+        self._width_label.grid(row=0, column=0)
+        self._height = tk.Entry(self._root)
+        self._height_label = tk.Label(text="Board height")
+        self._height_label.grid(row=2, column=0)
+        self._height.grid(row=2, column=2)
+        self._max_mines_entry = tk.Entry(self._root)
+        self._max_mines_label = tk.Label(text="Maximum mines per row")
+        self._max_mines_entry.grid(row=4, column=2)
+        self._max_mines_label.grid(row=4, column=0)
+        self._start_button = tk.Button(
+            text="Start game", command=self.validate_inputs
+        )
+        self._start_button.grid(row=7, column=2)
+        self._integer_label = tk.Label(text="Enter all values as integers.")
+        self._integer_label.grid(row=7, column=0)
 
     def start(self):
-        self.__mainwindow.mainloop()
-        return self.__width.get(), self.__length.get(), self.__maxmines.get()
+        self._root.mainloop()
+        return self._width.get(), self._height.get(), self._max_mines_entry.get()
 
     def stop(self):
-        self.__mainwindow.quit()
+        self._root.quit()
 
     def destroy(self):
-        self.__mainwindow.destroy()
+        self._root.destroy()
 
-    #Tarkistetaan arvot jotka käyttäjä antaa,
-    # ja tulostetaan ilmoitus jos arvot eivät sovi pelin toiminnallisuuteen
-    def checkvalues(self):
+    def validate_inputs(self):
         try:
-            if 30 >= int(self.__width.get()) > 0 and 30 >= int(self.__length.get()) > 0 and int(self.__width.get()) * int(self.__length.get()) > int(self.__maxmines.get()) > 1:
+            if (
+                30 >= int(self._width.get()) > 0
+                and 30 >= int(self._height.get()) > 0
+                and int(self._width.get()) * int(self._height.get())
+                > int(self._max_mines_entry.get())
+                > 1
+            ):
                 self.stop()
             else:
-                self.__warninglabel = Label(
-                    text="Values must be given as integers over 0.")
-                self.__warninglabel.grid(row=9, column=0)
-                self.__otherwarninglabel = Label(text="The maximum size board can be is 30x30. Mines can't fill the whole board and the maximum amount of mines must bet at least 2.")
-                self.__otherwarninglabel.grid(row=10, column=0)
+                self._warning_label = tk.Label(
+                    text="Values must be integers greater than 0."
+                )
+                self._warning_label.grid(row=9, column=0)
+                self._limits_label = tk.Label(
+                    text=(
+                        "The maximum board size is 30x30. Mines cannot fill "
+                        "the whole board, and the maximum number of mines per "
+                        "row must be at least 2."
+                    )
+                )
+                self._limits_label.grid(row=10, column=0)
         except:
-            self.__warninglabel = Label(text="Values must be given as integers over 0.")
-            self.__warninglabel.grid(row=9, column=0)
-            self.__otherwarninglabel = Label(text="The maximum size board can be is 30x30. Mines can't fill the whole board and the maximum amount of mines must bet at least 2.")
-            self.__otherwarninglabel.grid(row=10, column=0)
+            self._warning_label = tk.Label(
+                text="Values must be integers greater than 0."
+            )
+            self._warning_label.grid(row=9, column=0)
+            self._limits_label = tk.Label(
+                text=(
+                    "The maximum board size is 30x30. Mines cannot fill "
+                    "the whole board, and the maximum number of mines per "
+                    "row must be at least 2."
+                )
+            )
+            self._limits_label.grid(row=10, column=0)
 
 
-#Pelipöytä ikkuna, jossa esitetään pelikenttä
+class MinesweeperUI:
+    """Display the board and handle player interaction."""
 
-class Userinterface:
+    def __init__(self, board, width, height):
+        self._flag_count = 0
+        self._revealed_count = 0
+        self._cell_buttons = []
+        self._board = board
+        self._width = width
+        self._height = height
+        self._mine_count = 0
+        for row in range(len(self._board)):
+            for column in range(len(self._board[row])):
+                if self._board[row][column] == "*":
+                    self._mine_count += 1
+        self._root = tk.Tk()
+        self._root.title("Minesweeper")
+        self._board_frame = tk.Frame(self._root)
+        self._control_frame = tk.Frame(self._root)
+        self._mine_count_label = tk.Label(
+            self._control_frame, text="Mines: {}".format(self._mine_count)
+        )
+        self._mine_count_label.grid(row=0, column=0)
+        self._exit_button = tk.Button(self._control_frame, text="Exit", command=exit)
+        self._exit_button.grid(row=0, column=5)
+        for row in range(len(self._board)):
+            self._board_frame.rowconfigure(row, weight=1)
+            self._cell_buttons.append([])
+            for column in range(len(self._board[row])):
+                cell_button = tk.Button(self._board_frame, text="      ")
+                cell_button.grid(row=row, column=column)
+                # Bind coordinates as defaults so each button keeps its own position.
+                cell_button.config(
+                    command=lambda column=column, row=row: self.reveal(row, column)
+                )
+                cell_button.bind(
+                    "<Button-3>",
+                    lambda event, column=column, row=row: self.toggle_flag(
+                        row, column
+                    ),
+                )
+                self._cell_buttons[row].append(cell_button)
+        self._board_frame.grid(row=1, sticky=tk.EW)
+        self._control_frame.grid(row=0)
+        self._flag_count_label = tk.Label(
+            self._control_frame, text="Flags: {}".format(self._flag_count)
+        )
+        self._flag_count_label.grid(row=0, column=7)
+        restart_button = tk.Button(self._control_frame, text="Restart", command=self.restart)
+        restart_button.grid(row=0, column=2)
+        self._restart_button = restart_button
 
-    def __init__(self, board, width, length, ):
-
-        #Perusmuuttujat, joita käytetään myöhemmin.
-
-        self.__marked = 0
-
-        self.__revealed = 0
-
-        self.__gamebuttons = []
-
-        self.__board = board
-
-        self.__width = width
-
-        self.__length = length
-
-        self.__mines = 0
-
-        #Miinojen määrä laudalla lasketaan tässä.
-
-        for line in range(len(self.__board)):
-
-            for index in range(len(self.__board[line])):
-
-                if self.__board[line][index] == "*":
-
-                    self.__mines += 1
-
-        #Määritetään pääikkuna, johon luodaan pelilauta, missä esiinty pelikenttä.
-
-        #Consoleframe-ikkunassa esiintyy voitto- sekä häviöilmoitukset, sekä
-
-        # napit pelin uudelleen käynnistämiseen tai lopettamiseen.
-
-        self.__mainwindow = Tk()
-
-        self.__mainwindow.title("Minesweeper")
-
-        self.__boardframe = Frame(self.__mainwindow)
-
-        self.__consoleframe = Frame(self.__mainwindow)
-
-        self.__losegamegrame = Frame(self.__mainwindow)
-
-        self.__minecount = Label(self.__consoleframe, text="Mines: {}".format(self.__mines))
-
-        self.__minecount.grid(row=0, column=0)
-
-        self.__exitbutton = Button(self.__consoleframe, text="Exit", command=exit)
-
-        self.__exitbutton.grid(row=0, column=5)
-
-        #Tehdään minesweeperfunktiossa luotu pelilauta graafisesti, käymällä läpi jokainen
-
-        #pelilaudan jäsen, ja määritellään sille painikekomento ja toiminnoit painaessa.
-
-        #Y on pelilaudan rivi ja x sarake.
-
-        for line in range (len(self.__board)):
-
-            self.__boardframe.rowconfigure(line, weight=1)
-
-            self.__gamebuttons.append([])
-
-            for index in range(len(self.__board[line])):
-
-                gamebutton = Button(self.__boardframe, text= "      ")
-
-                gamebutton.grid(row = line, column = index)
-
-                gamebutton.config(command= lambda x = index, y = line:self.reveal(y, x))
-
-                gamebutton.bind("<Button-3>", lambda event, x = index, y = line:self.redmarks(y, x))
-
-                self.__gamebuttons[line].append(gamebutton)
-
-        self.__boardframe.grid(row=1, sticky=EW)
-
-        self.__consoleframe.grid(row = 0)
-
-        #Merkattujen nappuloiden lukumäärä esitetään pelaajalle.
-
-        self.__markcountlabel= Label(self.__consoleframe, text="Marked: {}".format(self.__marked))
-
-        self.__markcountlabel.grid(row = 0, column=7)
-
-        restartbutton = Button(self.__consoleframe, text="Restart", command=self.restart)
-
-        restartbutton.grid(row = 0, column=2)
-
-        self.__restartbutton = restartbutton
-
-    #Punaisten merkkien toiminnallisuus. Tarkastetaan onko nappula jo merkattu, ja sen
-
-    #perusteella värjätään se  joko punaiseksi
-
-    # tai poistetaan värjäys.
-
-    def redmarks(self, line, index):
-
-        # Merkkauksen voi poistaa painamalla oikeaa hiiren näppäintä uudestaan.
-
-        if self.__gamebuttons[line][index].cget("background") == "red":
-
-            self.__gamebuttons[line][index].config(background=self.__mainwindow.cget("background"))
-
-            self.__marked -= 1
-
-            self.__markcountlabel.config(text="Marked: {}".format(self.__marked))
-
-
+    def toggle_flag(self, row, column):
+        if self._cell_buttons[row][column].cget("background") == "red":
+            self._cell_buttons[row][column].config(background=self._root.cget("background"))
+            self._flag_count -= 1
+            self._flag_count_label.config(text="Flags: {}".format(self._flag_count))
         else:
+            self._cell_buttons[row][column].config(background="red")
+            self._flag_count += 1
+            self._flag_count_label.config(text="Flags: {}".format(self._flag_count))
 
-            self.__gamebuttons[line][index].config(background="red")
-
-            self.__marked += 1
-
-            self.__markcountlabel.config(text="Marked: {}".format(self.__marked))
-
-    #Metodi, jota käytetään pelin lopettamiseen/sulkemiseen.
     def stop(self):
+        self._root.destroy()
 
-        self.__mainwindow.destroy()
-
-    #Metodi, joka käy läpi 0 paljastuneen painikkeen viereiset paikat, ja avaa ne.
-
-    #Jos vieressä on toinen 0 joka paljastuu, se avaa samalla logiikalla viereiset paikat.
-
-    def revealzero(self,line, index):
-
-        for i in [-1, 1]:
-
-            if line+i >= 0 and line+i <= self.__length-1:
-
+    def reveal_empty_area(self, row, column):
+        for offset in [-1, 1]:
+            if row + offset >= 0 and row + offset <= self._height-1:
                 try:
-
-                    if self.__board[line+i][index] == 0:
-
-                        self.__gamebuttons[line+i][index].config(text="  {}  ".format(0), state='disabled')
-
-                        self.__board[line+i][index] = 'R'
-
-                        self.revealzero(line+i, index)
-
-                    elif self.__board[line+i][index] != "*" and self.__board[line+i][index] != 'R' and self.__board[line+i][index] != 'K':
-
-                        self.__gamebuttons[line+i][index].config(text="  {}  ".format(self.__board[line+i][index]), state="disabled")
-
-                        self.__board[line+i][index] = 'K'
-
-                #Merkataan 0 paikata R ja muut numerot K. Näin helpotetaan
-
-                #avattujen paikkojen tunnistamista.
-
+                    # "R" marks revealed empty cells; "K" marks revealed numbered cells.
+                    if self._board[row + offset][column] == 0:
+                        self._cell_buttons[row + offset][column].config(
+                            text="  {}  ".format(0), state="disabled"
+                        )
+                        self._board[row + offset][column] = 'R'
+                        self.reveal_empty_area(row + offset, column)
+                    elif (
+                        self._board[row + offset][column] != "*"
+                        and self._board[row + offset][column] != "R"
+                        and self._board[row + offset][column] != "K"
+                    ):
+                        self._cell_buttons[row + offset][column].config(
+                            text="  {}  ".format(
+                                self._board[row + offset][column]
+                            ),
+                            state="disabled",
+                        )
+                        self._board[row + offset][column] = 'K'
                 except IndexError:
-
                     pass
-
-            if index+i >= 0 and index+i <= self.__width - 1:
-
+            if column + offset >= 0 and column + offset <= self._width - 1:
                 try:
-
-                    if self.__board[line][index+i] == 0:
-
-                        self.__gamebuttons[line][index+i].config(text="  {}  ".format(0), state='disabled')
-
-                        self.__board[line][index+i] = 'R'
-
-                        self.revealzero(line, index+i)
-
-                    elif self.__board[line][index+i] != "*" and self.__board[line][index+i] != 'R' and self.__board[line][index+i] != 'K':
-
-                        self.__gamebuttons[line][index+i].config(text="  {}  ".format(self.__board[line][index+i]), state= 'disabled')
-
-                        self.__board[line][index+i] = 'K'
-
+                    if self._board[row][column + offset] == 0:
+                        self._cell_buttons[row][column + offset].config(
+                            text="  {}  ".format(0), state="disabled"
+                        )
+                        self._board[row][column + offset] = 'R'
+                        self.reveal_empty_area(row, column + offset)
+                    elif (
+                        self._board[row][column + offset] != "*"
+                        and self._board[row][column + offset] != "R"
+                        and self._board[row][column + offset] != "K"
+                    ):
+                        self._cell_buttons[row][column + offset].config(
+                            text="  {}  ".format(
+                                self._board[row][column + offset]
+                            ),
+                            state="disabled",
+                        )
+                        self._board[row][column + offset] = 'K'
                 except IndexError:
-
                     pass
-
-            for j in [-1, 1]:
-
-                if index + i >= 0 and index + i <= self.__width - 1 and line + j >= 0 and line + j <= self.__length - 1:
-
+            for row_offset in [-1, 1]:
+                if (
+                    column + offset >= 0
+                    and column + offset <= self._width - 1
+                    and row + row_offset >= 0
+                    and row + row_offset <= self._height - 1
+                ):
                     try:
-
-                        if self.__board[line+j][index+i] == 0:
-
-                            self.__gamebuttons[line+j][index+i].config(text="  {}  ".format(0), state='disabled')
-
-                            self.__board[line+j][index+i] = 'R'
-
-                            self.revealzero(line+j, index+i)
-
-                        elif self.__board[line+j][index+i] != "*" and self.__board[line+j][index+i] != 'R' and self.__board[line+j][index+i] != 'K':
-
-                            self.__gamebuttons[line+j][index+i].config(text="  {}  ".format(self.__board[line+j][index+i]), state='disabled')
-
-                            self.__board[line+j][index+i] = 'K'
-
+                        if self._board[row + row_offset][column + offset] == 0:
+                            self._cell_buttons[
+                                row + row_offset
+                            ][column + offset].config(
+                                text="  {}  ".format(0), state="disabled"
+                            )
+                            self._board[row + row_offset][column + offset] = 'R'
+                            self.reveal_empty_area(row + row_offset, column + offset)
+                        elif (
+                            self._board[row + row_offset][column + offset] != "*"
+                            and self._board[row + row_offset][column + offset] != "R"
+                            and self._board[row + row_offset][column + offset] != "K"
+                        ):
+                            self._cell_buttons[
+                                row + row_offset
+                            ][column + offset].config(
+                                text="  {}  ".format(
+                                    self._board[row + row_offset][column + offset]
+                                ),
+                                state="disabled",
+                            )
+                            self._board[row + row_offset][column + offset] = 'K'
                     except IndexError:
-
                         pass
 
-    #Jos pelaaja astuu miinaan, tai voittaa pelin,
+    def show_all_mines(self):
+        for row in range(len(self._board)):
+            for column in range(len(self._board[row])):
+                if self._board[row][column] == "*":
+                    self._cell_buttons[row][column].config(text="  {}  ".format("*"))
 
-    # paljastetaan kaikki miinat kentältä.
-
-    def revealmines(self):
-
-        for line in range(len(self.__board)):
-
-            for index in range(len(self.__board[line])):
-
-                if self.__board[line][index] == "*":
-
-                    self.__gamebuttons[line][index].config(text="  {}  ".format("*"))
-
-    #Jos kaikki paitsi miinaluukut on avattu, pelaajalle paljastetaan miinat,
-
-    # ja tulostetaan voittoilmoitus.
-
-    def wingame(self):
-
-        self.revealmines()
-
-        self.__exitbutton.destroy()
-
-        self.__restartbutton.destroy()
-
-        self.__markcountlabel.destroy()
-
-        self.__minecount.destroy()
-
-        Wongamebutton = Button(self.__consoleframe, text="You have discovered every planted mine. Awesome! Play again?", command=self.restart)
-
-        Wongamebutton.grid(row=0, column=3)
-
-        quitgamebutton = Button(self.__consoleframe, text="Quit playing?", command= self.stop)
-
-        quitgamebutton.grid(row=0, column=7)
-
-        for line in self.__gamebuttons:
-
-            for button in line:
-
+    def show_win(self):
+        self.show_all_mines()
+        self._exit_button.destroy()
+        self._restart_button.destroy()
+        self._flag_count_label.destroy()
+        self._mine_count_label.destroy()
+        win_button = tk.Button(
+            self._control_frame,
+            text="You revealed every safe cell. Play again?",
+            command=self.restart,
+        )
+        win_button.grid(row=0, column=3)
+        quit_button = tk.Button(
+            self._control_frame, text="Quit playing?", command=self.stop
+        )
+        quit_button.grid(row=0, column=7)
+        for row in self._cell_buttons:
+            for button in row:
                 button.configure(state='disable')
 
-    #Metodi, jota käytetään  luukkujen paljastamiseen.
-
-    #Jos luukun alta paljastuu miina, paljastetaan muut miinat
-
-    # ja tulostetaan häviöilmoitus.
-
-    def reveal(self, line, index):
-
-        number = self.__board[line][index]
-
-        if number == "*":
-
-            self.revealmines()
-
-            self.__exitbutton.destroy()
-
-            self.__restartbutton.destroy()
-
-            self.__markcountlabel.destroy()
-
-            self.__minecount.destroy()
-
-            Lostgamebutton = Button(self.__consoleframe, text="BOOM! You stepped into a mine. Restart game?", command=self.restart)
-
-            quitgamebutton = Button(self.__consoleframe, text="Quit playing?", command=self.stop)
-
-            quitgamebutton.grid(row=0, column=7)
-
-            Lostgamebutton.grid(row=0, column=3)
-
-            for line in self.__gamebuttons:
-
-                for button in line:
-
+    def reveal(self, row, column):
+        cell_value = self._board[row][column]
+        if cell_value == "*":
+            self.show_all_mines()
+            self._exit_button.destroy()
+            self._restart_button.destroy()
+            self._flag_count_label.destroy()
+            self._mine_count_label.destroy()
+            loss_button = tk.Button(
+                self._control_frame,
+                text="BOOM! You stepped into a mine. Restart game?",
+                command=self.restart,
+            )
+            quit_button = tk.Button(self._control_frame, text="Quit playing?", command=self.stop)
+            quit_button.grid(row=0, column=7)
+            loss_button.grid(row=0, column=3)
+            for row in self._cell_buttons:
+                for button in row:
                     button.configure(state='disable')
-
-        #Jos luukun alta paljastuu 0, paljastetaan viereiset luukut,
-
-        # ja tarkistetaan, onko luukuissa
-
-        # jäljellä enää miinoja.
-
-        #Jos kaikki ei-miinoitetut luukut on avattu, pelaaja voittaa.
-
-        elif number == 0:
-
-            self.__gamebuttons[line][index].config(text="  {}  ".format(number), state='disabled')
-
-            self.__board[line][index] = 'R'
-
-            self.revealzero(line, index)
-
-            for line in range(len(self.__board)):
-
-                for index in range(len(self.__board[line])):
-
-                    if self.__board[line][index] == 'K' or self.__board[line][index] == 'R':
-
-                        self.__revealed += 1
-
-            if int(self.__width) * int(self.__length) - int(self.__mines) == int(self.__revealed):
-
-                self.wingame()
-
+        elif cell_value == 0:
+            self._cell_buttons[row][column].config(
+                text="  {}  ".format(cell_value), state="disabled"
+            )
+            self._board[row][column] = 'R'
+            self.reveal_empty_area(row, column)
+            for row in range(len(self._board)):
+                for column in range(len(self._board[row])):
+                    if self._board[row][column] == 'K' or self._board[row][column] == 'R':
+                        self._revealed_count += 1
+            if (
+                int(self._width) * int(self._height) - int(self._mine_count)
+                == int(self._revealed_count)
+            ):
+                self.show_win()
             else:
-
-                self.__revealed = 0
-
-        #Jos numero on muu kuin 0, paljastetaan vain kyisenen luukku.
-
-        #Tarkastetaan samalla lailla kuin aijemmin, onko pelaaja voittanut.
-
+                self._revealed_count = 0
         else:
-
-            self.__gamebuttons[line][index].config(text="  {}  ".format(number), state='disabled')
-
-            self.__board[line][index] = 'K'
-
-            for line in range(len(self.__board)):
-
-                for index in range(len(self.__board[line])):
-
-                    if self.__board[line][index] == 'K' or self.__board[line][index] == 'R':
-
-                        self.__revealed += 1
-
-            if int(self.__width) * int(self.__length) - int(self.__mines) == int(self.__revealed):
-
-                self.wingame()
-
+            self._cell_buttons[row][column].config(
+                text="  {}  ".format(cell_value), state="disabled"
+            )
+            self._board[row][column] = 'K'
+            for row in range(len(self._board)):
+                for column in range(len(self._board[row])):
+                    if self._board[row][column] == 'K' or self._board[row][column] == 'R':
+                        self._revealed_count += 1
+            if (
+                int(self._width) * int(self._height) - int(self._mine_count)
+                == int(self._revealed_count)
+            ):
+                self.show_win()
             else:
-
-                self.__revealed = 0
-
-    #Metodi pelin käynnistämiseen.
+                self._revealed_count = 0
 
     def start(self):
-
-        self.__mainwindow.mainloop()
-
-    #Metodi pelin uudelleenkäynnistämiseen.
-
+        self._root.mainloop()
 
     def restart(self):
-
-        self.__mainwindow.destroy()
-
+        self._root.destroy()
         restart()
 
+
 def main():
-    #Otetaan pelin koko ja miinojen määrä Gamesize luokasta
-    questions_ui = Gamesize()
+    setup_dialog = GameSetupDialog()
     try:
-        width, length, maxmines = questions_ui.start()
-    except TclError:
+        width, height, max_mines_per_row = setup_dialog.start()
+    except tk.TclError:
         return
-    questions_ui.destroy()
-
-    board, width, length = generate_board(int(width), int(length), int(maxmines),)
-    ui = Userinterface(board, width, length)
-
-    #Käynnistetään käyttöliittymä
-
-    ui.start()
-
-
-
-
+    setup_dialog.destroy()
+    board, width, height = generate_board(
+        int(width), int(height), int(max_mines_per_row)
+    )
+    game_ui = MinesweeperUI(board, width, height)
+    game_ui.start()

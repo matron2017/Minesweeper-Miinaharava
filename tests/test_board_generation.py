@@ -31,23 +31,23 @@ class TestBoardGeneration(unittest.TestCase):
 
     def test_board_shape_contents_and_neighbor_counts(self):
         width = 8
-        length = 6
-        maxmines = 3
+        height = 6
+        max_mines_per_row = 3
 
-        board, returned_width, returned_length = generate_board(
-            width, length, maxmines
+        board, returned_width, returned_height = generate_board(
+            width, height, max_mines_per_row
         )
 
         self.assertEqual(returned_width, width)
-        self.assertEqual(returned_length, length)
-        self.assertEqual(len(board), length)
+        self.assertEqual(returned_height, height)
+        self.assertEqual(len(board), height)
         self.assertTrue(all(len(row) == width for row in board))
 
         for row in board:
             self.assertTrue(all(cell == "*" or isinstance(cell, int)
                                 and 0 <= cell <= 8 for cell in row))
             self.assertGreaterEqual(row.count("*"), 1)
-            self.assertLessEqual(row.count("*"), maxmines)
+            self.assertLessEqual(row.count("*"), max_mines_per_row)
 
         for row_index, row in enumerate(board):
             for column_index, cell in enumerate(row):
