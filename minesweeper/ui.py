@@ -1,7 +1,12 @@
 """Tkinter user interface for Minesweeper."""
 
 import tkinter as tk
-from minesweeper.game import generate_board
+from minesweeper.game import (
+    GameStatus,
+    MINE,
+    MinesweeperGame,
+    generate_board,
+)
 
 
 def restart():
@@ -14,7 +19,8 @@ def restart():
         int(width), int(height), int(max_mines_per_row)
     )
     setup_dialog.destroy()
-    game_ui = MinesweeperUI(board, width, height)
+    game = MinesweeperGame(board)
+    game_ui = MinesweeperUI(game)
     game_ui.start()
 
 
@@ -82,33 +88,26 @@ class GameSetupDialog:
 class MinesweeperUI:
     """Display the board and handle player interaction."""
 
-    def __init__(self, board, width, height):
-        self._flag_count = 0
-        self._revealed_count = 0
+    def __init__(self, game):
+        self._game = game
         self._cell_buttons = []
-        self._board = board
-        self._width = width
-        self._height = height
-        self._mine_count = 0
-        for row in range(len(self._board)):
-            for column in range(len(self._board[row])):
-                if self._board[row][column] == "*":
-                    self._mine_count += 1
+        self._width = game.width
+        self._height = game.height
         self._root = tk.Tk()
         self._root.title("Minesweeper")
-        self._board_frame = tk.Frame(self._root)
+        self._grid_frame = tk.Frame(self._root)
         self._control_frame = tk.Frame(self._root)
         self._mine_count_label = tk.Label(
-            self._control_frame, text="Mines: {}".format(self._mine_count)
+            self._control_frame, text="Mines: {}".format(game.mine_count)
         )
         self._mine_count_label.grid(row=0, column=0)
         self._exit_button = tk.Button(self._control_frame, text="Exit", command=exit)
         self._exit_button.grid(row=0, column=5)
-        for row in range(len(self._board)):
-            self._board_frame.rowconfigure(row, weight=1)
+        for row in range(self._height):
+            self._grid_frame.rowconfigure(row, weight=1)
             self._cell_buttons.append([])
-            for column in range(len(self._board[row])):
-                cell_button = tk.Button(self._board_frame, text="      ")
+            for column in range(self._width):
+                cell_button = tk.Button(self._grid_frame, text="      ")
                 cell_button.grid(row=row, column=column)
                 # Bind coordinates as defaults so each button keeps its own position.
                 cell_button.config(
@@ -121,120 +120,47 @@ class MinesweeperUI:
                     ),
                 )
                 self._cell_buttons[row].append(cell_button)
-        self._board_frame.grid(row=1, sticky=tk.EW)
+        self._grid_frame.grid(row=1, sticky=tk.EW)
         self._control_frame.grid(row=0)
-        self._flag_count_label = tk.Label(
-            self._control_frame, text="Flags: {}".format(self._flag_count)
+        self._flags_label = tk.Label(
+            self._control_frame,
+            text="Flags: {}".format(len(self._game.flagged_cells)),
         )
-        self._flag_count_label.grid(row=0, column=7)
+        self._flags_label.grid(row=0, column=7)
         restart_button = tk.Button(self._control_frame, text="Restart", command=self.restart)
         restart_button.grid(row=0, column=2)
         self._restart_button = restart_button
 
     def toggle_flag(self, row, column):
-        if self._cell_buttons[row][column].cget("background") == "red":
-            self._cell_buttons[row][column].config(background=self._root.cget("background"))
-            self._flag_count -= 1
-            self._flag_count_label.config(text="Flags: {}".format(self._flag_count))
-        else:
+        self._game.toggle_flag(row, column)
+
+        if self._game.is_flagged(row, column):
             self._cell_buttons[row][column].config(background="red")
-            self._flag_count += 1
-            self._flag_count_label.config(text="Flags: {}".format(self._flag_count))
+        else:
+            self._cell_buttons[row][column].config(
+                background=self._root.cget("background")
+            )
+
+        self._flags_label.config(
+            text="Flags: {}".format(len(self._game.flagged_cells))
+        )
 
     def stop(self):
         self._root.destroy()
 
-    def reveal_empty_area(self, row, column):
-        for offset in [-1, 1]:
-            if row + offset >= 0 and row + offset <= self._height-1:
-                try:
-                    # "R" marks revealed empty cells; "K" marks revealed numbered cells.
-                    if self._board[row + offset][column] == 0:
-                        self._cell_buttons[row + offset][column].config(
-                            text="  {}  ".format(0), state="disabled"
-                        )
-                        self._board[row + offset][column] = 'R'
-                        self.reveal_empty_area(row + offset, column)
-                    elif (
-                        self._board[row + offset][column] != "*"
-                        and self._board[row + offset][column] != "R"
-                        and self._board[row + offset][column] != "K"
-                    ):
-                        self._cell_buttons[row + offset][column].config(
-                            text="  {}  ".format(
-                                self._board[row + offset][column]
-                            ),
-                            state="disabled",
-                        )
-                        self._board[row + offset][column] = 'K'
-                except IndexError:
-                    pass
-            if column + offset >= 0 and column + offset <= self._width - 1:
-                try:
-                    if self._board[row][column + offset] == 0:
-                        self._cell_buttons[row][column + offset].config(
-                            text="  {}  ".format(0), state="disabled"
-                        )
-                        self._board[row][column + offset] = 'R'
-                        self.reveal_empty_area(row, column + offset)
-                    elif (
-                        self._board[row][column + offset] != "*"
-                        and self._board[row][column + offset] != "R"
-                        and self._board[row][column + offset] != "K"
-                    ):
-                        self._cell_buttons[row][column + offset].config(
-                            text="  {}  ".format(
-                                self._board[row][column + offset]
-                            ),
-                            state="disabled",
-                        )
-                        self._board[row][column + offset] = 'K'
-                except IndexError:
-                    pass
-            for row_offset in [-1, 1]:
-                if (
-                    column + offset >= 0
-                    and column + offset <= self._width - 1
-                    and row + row_offset >= 0
-                    and row + row_offset <= self._height - 1
-                ):
-                    try:
-                        if self._board[row + row_offset][column + offset] == 0:
-                            self._cell_buttons[
-                                row + row_offset
-                            ][column + offset].config(
-                                text="  {}  ".format(0), state="disabled"
-                            )
-                            self._board[row + row_offset][column + offset] = 'R'
-                            self.reveal_empty_area(row + row_offset, column + offset)
-                        elif (
-                            self._board[row + row_offset][column + offset] != "*"
-                            and self._board[row + row_offset][column + offset] != "R"
-                            and self._board[row + row_offset][column + offset] != "K"
-                        ):
-                            self._cell_buttons[
-                                row + row_offset
-                            ][column + offset].config(
-                                text="  {}  ".format(
-                                    self._board[row + row_offset][column + offset]
-                                ),
-                                state="disabled",
-                            )
-                            self._board[row + row_offset][column + offset] = 'K'
-                    except IndexError:
-                        pass
-
     def show_all_mines(self):
-        for row in range(len(self._board)):
-            for column in range(len(self._board[row])):
-                if self._board[row][column] == "*":
-                    self._cell_buttons[row][column].config(text="  {}  ".format("*"))
+        for row in range(self._height):
+            for column in range(self._width):
+                if self._game.cell_value(row, column) == MINE:
+                    self._cell_buttons[row][column].config(
+                        text="  {}  ".format(MINE)
+                    )
 
     def show_win(self):
         self.show_all_mines()
         self._exit_button.destroy()
         self._restart_button.destroy()
-        self._flag_count_label.destroy()
+        self._flags_label.destroy()
         self._mine_count_label.destroy()
         win_button = tk.Button(
             self._control_frame,
@@ -250,58 +176,44 @@ class MinesweeperUI:
             for button in row:
                 button.configure(state='disable')
 
+    def show_loss(self):
+        self.show_all_mines()
+        self._exit_button.destroy()
+        self._restart_button.destroy()
+        self._flags_label.destroy()
+        self._mine_count_label.destroy()
+
+        loss_button = tk.Button(
+            self._control_frame,
+            text="BOOM! You stepped into a mine. Restart game?",
+            command=self.restart,
+        )
+        quit_button = tk.Button(
+            self._control_frame, text="Quit playing?", command=self.stop
+        )
+        quit_button.grid(row=0, column=7)
+        loss_button.grid(row=0, column=3)
+
+        for row in self._cell_buttons:
+            for button in row:
+                button.configure(state="disable")
+
     def reveal(self, row, column):
-        cell_value = self._board[row][column]
-        if cell_value == "*":
-            self.show_all_mines()
-            self._exit_button.destroy()
-            self._restart_button.destroy()
-            self._flag_count_label.destroy()
-            self._mine_count_label.destroy()
-            loss_button = tk.Button(
-                self._control_frame,
-                text="BOOM! You stepped into a mine. Restart game?",
-                command=self.restart,
-            )
-            quit_button = tk.Button(self._control_frame, text="Quit playing?", command=self.stop)
-            quit_button.grid(row=0, column=7)
-            loss_button.grid(row=0, column=3)
-            for row in self._cell_buttons:
-                for button in row:
-                    button.configure(state='disable')
-        elif cell_value == 0:
-            self._cell_buttons[row][column].config(
+        newly_revealed = self._game.reveal(row, column)
+
+        for revealed_row, revealed_column in newly_revealed:
+            cell_value = self._game.cell_value(revealed_row, revealed_column)
+            self._cell_buttons[revealed_row][revealed_column].config(
                 text="  {}  ".format(cell_value), state="disabled"
             )
-            self._board[row][column] = 'R'
-            self.reveal_empty_area(row, column)
-            for row in range(len(self._board)):
-                for column in range(len(self._board[row])):
-                    if self._board[row][column] == 'K' or self._board[row][column] == 'R':
-                        self._revealed_count += 1
-            if (
-                int(self._width) * int(self._height) - int(self._mine_count)
-                == int(self._revealed_count)
-            ):
-                self.show_win()
-            else:
-                self._revealed_count = 0
-        else:
-            self._cell_buttons[row][column].config(
-                text="  {}  ".format(cell_value), state="disabled"
-            )
-            self._board[row][column] = 'K'
-            for row in range(len(self._board)):
-                for column in range(len(self._board[row])):
-                    if self._board[row][column] == 'K' or self._board[row][column] == 'R':
-                        self._revealed_count += 1
-            if (
-                int(self._width) * int(self._height) - int(self._mine_count)
-                == int(self._revealed_count)
-            ):
-                self.show_win()
-            else:
-                self._revealed_count = 0
+
+        if not newly_revealed:
+            return
+
+        if self._game.status is GameStatus.LOST:
+            self.show_loss()
+        elif self._game.status is GameStatus.WON:
+            self.show_win()
 
     def start(self):
         self._root.mainloop()
@@ -321,5 +233,6 @@ def main():
     board, width, height = generate_board(
         int(width), int(height), int(max_mines_per_row)
     )
-    game_ui = MinesweeperUI(board, width, height)
+    game = MinesweeperGame(board)
+    game_ui = MinesweeperUI(game)
     game_ui.start()
