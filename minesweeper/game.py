@@ -1,6 +1,113 @@
-"""Board-generation logic for Minesweeper."""
+"""Board generation and pure game-state logic for Minesweeper."""
 
+from enum import Enum, auto
 import random
+
+MINE = "*"
+
+
+class GameStatus(Enum):
+    IN_PROGRESS = auto()
+    WON = auto()
+    LOST = auto()
+
+
+class MinesweeperGame:
+    """Manage immutable board data and the current game state."""
+
+    def __init__(self, board):
+        if not board or any(not row for row in board):
+            raise ValueError("The board must contain at least one cell.")
+
+        width = len(board[0])
+        if any(len(row) != width for row in board):
+            raise ValueError("The board must be rectangular.")
+
+        self._board = tuple(tuple(row) for row in board)
+        self._width = width
+        self._height = len(self._board)
+        self._mine_count = sum(row.count(MINE) for row in self._board)
+        self._status = GameStatus.IN_PROGRESS
+        self._revealed_cells = set()
+        self._flagged_cells = set()
+
+    @property
+    def width(self):
+        return self._width
+
+    @property
+    def height(self):
+        return self._height
+
+    @property
+    def mine_count(self):
+        return self._mine_count
+
+    @property
+    def status(self):
+        return self._status
+
+    @property
+    def revealed_cells(self):
+        return frozenset(self._revealed_cells)
+
+    @property
+    def flagged_cells(self):
+        return frozenset(self._flagged_cells)
+
+    @property
+    def remaining_mines(self):
+        return self._mine_count - len(self._flagged_cells)
+
+    def _validate_coordinates(self, row, column):
+        if not (0 <= row < self._height and 0 <= column < self._width):
+            raise IndexError("Board coordinates are out of bounds.")
+
+    def cell_value(self, row, column):
+        self._validate_coordinates(row, column)
+        return self._board[row][column]
+
+    def is_revealed(self, row, column):
+        self._validate_coordinates(row, column)
+        return (row, column) in self._revealed_cells
+
+    def is_flagged(self, row, column):
+        self._validate_coordinates(row, column)
+        return (row, column) in self._flagged_cells
+
+    def toggle_flag(self, row, column):
+        self._validate_coordinates(row, column)
+        coordinate = (row, column)
+
+        if self._status is not GameStatus.IN_PROGRESS:
+            return
+        if coordinate in self._revealed_cells:
+            return
+
+        if coordinate in self._flagged_cells:
+            self._flagged_cells.remove(coordinate)
+        else:
+            self._flagged_cells.add(coordinate)
+
+    def reveal(self, row, column):
+        self._validate_coordinates(row, column)
+        coordinate = (row, column)
+
+        if self._status is not GameStatus.IN_PROGRESS:
+            return set()
+        if coordinate in self._revealed_cells:
+            return set()
+        if coordinate in self._flagged_cells:
+            return set()
+
+        self._revealed_cells.add(coordinate)
+
+        if self._board[row][column] == MINE:
+            self._status = GameStatus.LOST
+        elif len(self._revealed_cells) == self._width * self._height - self._mine_count:
+            self._status = GameStatus.WON
+
+        return {coordinate}
 
 
 def generate_board(width, height, max_mines_per_row):
@@ -23,11 +130,11 @@ def generate_board(width, height, max_mines_per_row):
         mines_in_row = random.randint(1, max_mines_per_row)
 
         for column in random.sample(range(width), mines_in_row):
-            row[column] = "*"
+            row[column] = MINE
 
     for row_index in range(height):
         for column_index in range(width):
-            if board[row_index][column_index] == "*":
+            if board[row_index][column_index] == MINE:
                 continue
 
             adjacent_mines = 0
@@ -43,7 +150,7 @@ def generate_board(width, height, max_mines_per_row):
                         continue
 
                     if (board[row_index + row_offset]
-                            [column_index + column_offset] == "*"):
+                            [column_index + column_offset] == MINE):
                         adjacent_mines += 1
 
             board[row_index][column_index] = adjacent_mines
