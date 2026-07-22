@@ -3,20 +3,6 @@
 A desktop Minesweeper game written in Python using Tkinter. Players can choose
 the board dimensions and the maximum number of mines generated in each row.
 
-## Features
-
-- Configurable board width and height
-- Configurable maximum number of mines per row
-- Unique randomly selected mine positions within each row
-- Adjacent-mine counts in all eight directions
-- Left-click cell revealing
-- Right-click flagging and unflagging
-- Iterative empty-area revealing without recursive flood fill
-- Win and loss detection
-- Restart and exit controls
-- Game rules separated from the Tkinter interface
-- Automated tests using Python's standard `unittest` framework
-
 ## Requirements
 
 - Python 3
@@ -100,26 +86,4 @@ won, or lost. It does not depend on Tkinter.
 Contains the Tkinter setup dialog and game interface. It translates player
 input into operations on `MinesweeperGame` and renders the resulting state.
 
-### `minesweeper/__main__.py`
 
-Provides the package entry point used by:
-
-```bash
-python3 -m minesweeper
-```
-
-### `tests/`
-
-Contains regression tests for board generation, game-state transitions,
-flagging, mine detection, win detection, iterative empty-area revealing, and
-the connection between the interface and game state.
-
-## Run the tests
-
-From the repository root, run:
-
-```bash
-python3 -m unittest discover -s tests -v
-```
-
-The test suite does not require starting the complete graphical application.
