@@ -76,6 +76,89 @@ class TestMinesweeperGame(unittest.TestCase):
 
         self.assertEqual(game.reveal(0, 1), set())
 
+    def test_revealing_zero_opens_connected_zero_region_and_boundaries(self):
+        board = [
+            [0, 1, MINE, 1, 0],
+            [0, 2, 2, 2, 0],
+            [0, 1, MINE, 1, 0],
+        ]
+        game = MinesweeperGame(board)
+        expected = {
+            (0, 0), (0, 1),
+            (1, 0), (1, 1),
+            (2, 0), (2, 1),
+        }
+
+        self.assertEqual(game.reveal(1, 0), expected)
+        self.assertEqual(game.revealed_cells, frozenset(expected))
+        self.assertNotIn((0, 2), game.revealed_cells)
+        self.assertNotIn((1, 2), game.revealed_cells)
+        self.assertNotIn((2, 2), game.revealed_cells)
+        self.assertNotIn((0, 3), game.revealed_cells)
+        self.assertNotIn((1, 3), game.revealed_cells)
+        self.assertNotIn((2, 3), game.revealed_cells)
+        self.assertNotIn((0, 4), game.revealed_cells)
+        self.assertNotIn((1, 4), game.revealed_cells)
+        self.assertNotIn((2, 4), game.revealed_cells)
+
+    def test_zero_expansion_does_not_reveal_mines(self):
+        board = [
+            [0, 1, MINE, 1, 0],
+            [0, 2, 2, 2, 0],
+            [0, 1, MINE, 1, 0],
+        ]
+        game = MinesweeperGame(board)
+
+        game.reveal(1, 0)
+
+        self.assertNotIn((0, 2), game.revealed_cells)
+        self.assertNotIn((2, 2), game.revealed_cells)
+
+    def test_flagged_cells_inside_or_bordering_expansion_stay_hidden(self):
+        board = [
+            [0, 1, MINE, 1, 0],
+            [0, 2, 2, 2, 0],
+            [0, 1, MINE, 1, 0],
+        ]
+        game = MinesweeperGame(board)
+        game.toggle_flag(0, 0)
+        game.toggle_flag(0, 1)
+
+        revealed = game.reveal(1, 0)
+
+        self.assertNotIn((0, 0), revealed)
+        self.assertNotIn((0, 1), revealed)
+        self.assertNotIn((0, 0), game.revealed_cells)
+        self.assertNotIn((0, 1), game.revealed_cells)
+        self.assertEqual(game.flagged_cells, frozenset({(0, 0), (0, 1)}))
+
+    def test_corner_expansion_uses_all_eight_directions(self):
+        game = MinesweeperGame([[0, 0, 0], [0, 0, 0], [0, 0, 0]])
+
+        revealed = game.reveal(0, 0)
+
+        self.assertEqual(revealed, {
+            (0, 0), (0, 1), (0, 2),
+            (1, 0), (1, 1), (1, 2),
+            (2, 0), (2, 1), (2, 2),
+        })
+
+    def test_revealing_final_safe_region_wins(self):
+        game = MinesweeperGame([[MINE, 0], [0, 0]])
+
+        game.reveal(0, 1)
+
+        self.assertIs(game.status, GameStatus.WON)
+
+    def test_large_empty_board_expands_without_recursion(self):
+        game = MinesweeperGame([[0] * 100 for _ in range(100)])
+
+        revealed = game.reveal(50, 50)
+
+        self.assertEqual(len(revealed), 10_000)
+        self.assertEqual(len(game.revealed_cells), 10_000)
+        self.assertIs(game.status, GameStatus.WON)
+
     def test_revealing_mine_loses_the_game(self):
         game = MinesweeperGame(self.board)
 

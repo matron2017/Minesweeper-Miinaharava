@@ -89,6 +89,17 @@ class MinesweeperGame:
         else:
             self._flagged_cells.add(coordinate)
 
+    def _neighbors(self, row, column):
+        for row_offset in (-1, 0, 1):
+            for column_offset in (-1, 0, 1):
+                if row_offset == 0 and column_offset == 0:
+                    continue
+
+                neighbor_row = row + row_offset
+                neighbor_column = column + column_offset
+                if 0 <= neighbor_row < self._height and 0 <= neighbor_column < self._width:
+                    yield neighbor_row, neighbor_column
+
     def reveal(self, row, column):
         self._validate_coordinates(row, column)
         coordinate = (row, column)
@@ -100,14 +111,41 @@ class MinesweeperGame:
         if coordinate in self._flagged_cells:
             return set()
 
-        self._revealed_cells.add(coordinate)
-
         if self._board[row][column] == MINE:
+            self._revealed_cells.add(coordinate)
             self._status = GameStatus.LOST
-        elif len(self._revealed_cells) == self._width * self._height - self._mine_count:
+            return {coordinate}
+
+        newly_revealed = set()
+        pending = [coordinate]
+
+        while pending:
+            current = pending.pop()
+            if current in self._revealed_cells or current in self._flagged_cells:
+                continue
+
+            current_row, current_column = current
+            if self._board[current_row][current_column] == MINE:
+                continue
+
+            self._revealed_cells.add(current)
+            newly_revealed.add(current)
+
+            if self._board[current_row][current_column] != 0:
+                continue
+
+            for neighbor in self._neighbors(current_row, current_column):
+                if neighbor in self._revealed_cells or neighbor in self._flagged_cells:
+                    continue
+
+                neighbor_row, neighbor_column = neighbor
+                if self._board[neighbor_row][neighbor_column] != MINE:
+                    pending.append(neighbor)
+
+        if len(self._revealed_cells) == self._width * self._height - self._mine_count:
             self._status = GameStatus.WON
 
-        return {coordinate}
+        return newly_revealed
 
 
 def generate_board(width, height, max_mines_per_row):
