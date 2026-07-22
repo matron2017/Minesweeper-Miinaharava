@@ -1,7 +1,7 @@
 import random
 import unittest
 
-from Miinaharava import minesweeper
+from minesweeper.game import generate_board
 
 
 class TestBoardGeneration(unittest.TestCase):
@@ -34,7 +34,7 @@ class TestBoardGeneration(unittest.TestCase):
         length = 6
         maxmines = 3
 
-        board, returned_width, returned_length = minesweeper(
+        board, returned_width, returned_length = generate_board(
             width, length, maxmines
         )
 

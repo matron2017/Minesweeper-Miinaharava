@@ -10,9 +10,9 @@
 
 #Random-kirjastoa käytetään miinojen määrän satunnaisessa luomisessa.
 
-import random
-
 from tkinter import *
+
+from minesweeper.game import generate_board
 
 #Funktio, jota käytetään pelin uudellen aloittamisessa
 
@@ -24,7 +24,7 @@ def restart():
         width, length, maxmines = questions_ui.start()
     except TclError:
         return
-    board, width, length = minesweeper(int(width), int(length), int(maxmines))
+    board, width, length = generate_board(int(width), int(length), int(maxmines))
 
 
     questions_ui.destroy()
@@ -447,102 +447,6 @@ class Userinterface:
 
         restart()
 
-#Funktio, jossa määritellään pelikentän koko.
-
-#Myös miinojen määrä määritellään satunnaisesti
-
-# tässä funktiossa.
-
-def minesweeper(width, length, maxmines):
-
-    board = []
-    minmines = 1
-
-
-    totalmines = 0
-
-    #Luodaan pelikenttä, jossa i on korkeus ja j leveys.
-
-    for i in range(length):
-
-        board.append([])
-
-        for j in range(width):
-
-            board[i].append(0)
-
-    #Määritetään miinojen määrä, ja lisätään ne pelikentälle.
-
-    #
-
-    for row in board:
-
-        minesperline = random.randint(minmines, maxmines)
-
-        totalmines += minesperline
-
-        for i in range (0, minesperline):
-
-            index = random.randint(0, width-1)
-
-            if "*" != row[index]:
-
-                row[index] = "*"
-
-                minesperline -= 1
-
-            if minesperline == 0:
-
-                break
-
-    #Käydään läpi ei-miinoitetut paikat,
-
-    #ja merkataan ne niiden ympärille olevien
-
-    # miinojen yhteenlasketulla lukumäärällä
-
-    #yksi kerrallaan.
-
-    for y in range(0, length):
-
-        for x in range(0, width):
-
-            if board[y][x] == "*":
-
-                continue
-
-            else:
-
-                minesaround = 0
-
-                for j in range(-1,2,1):
-
-                    if y+j < 0 or y+j > length-1:
-
-                        continue
-
-                    else:
-
-                        for i in range(-1, 2, 1):
-
-                            if x+i < 0 or x+i > width-1:
-
-                                continue
-
-                            else:
-
-                                if board[y+j][x+i] == "*":
-
-                                     minesaround += 1
-
-                board[y][x] = minesaround
-
-    return board, width, length
-
-    #Pääfunktio, jossa luodaan pelikenttä ja
-
-    #otetaan se käytöön.
-
 def main():
     #Otetaan pelin koko ja miinojen määrä Gamesize luokasta
     questions_ui = Gamesize()
@@ -552,7 +456,7 @@ def main():
         return
     questions_ui.destroy()
 
-    board, width, length = minesweeper(int(width), int(length), int(maxmines),)
+    board, width, length = generate_board(int(width), int(length), int(maxmines),)
     ui = Userinterface(board, width, length)
 
     #Käynnistetään käyttöliittymä
